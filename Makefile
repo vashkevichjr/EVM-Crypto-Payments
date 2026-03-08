@@ -1,9 +1,11 @@
-.PHONY: help run build migrate-up migrate-down docker-up docker-down docker-logs test clean
+.PHONY: help run build migrate-up migrate-down migrate-create docker-up docker-down docker-logs test clean
+
+include .env
 
 # Variables
 BINARY_NAME=gateway
 DOCKER_COMPOSE=docker-compose
-MIGRATE_CMD=migrate
+DB_URL=postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable
 
 help: ## Show help
 	@echo "Available commands:"
@@ -26,14 +28,14 @@ docker-down: ## Stop Docker containers
 docker-logs: ## Show Docker container logs
 	@$(DOCKER_COMPOSE) logs -f
 
-migrate-up: ## Apply migrations
-	@migrate -path migrations -database "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable" up
+migrate-up: ## Apply migrations (goose)
+	@goose -dir migrations postgres "$(DB_URL)" up
 
-migrate-down: ## Rollback migrations
-	@migrate -path migrations -database "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable" down
+migrate-down: ## Rollback migrations (goose)
+	@goose -dir migrations postgres "$(DB_URL)" down
 
-migrate-create: ## Create new migration (usage: make migrate-create NAME=create_merchants_table)
-	@migrate create -ext sql -dir migrations -seq $(NAME)
+migrate-create: ## Create new migration (usage: make migrate-create NAME=create_something)
+	@goose -dir migrations create $(NAME) sql
 
 test: ## Run tests
 	@go test -v ./...
